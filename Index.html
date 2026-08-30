@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apollo Client</title>
+    <style>
+        /* --- ROOT VARIABLES & RESET --- */
+        :root {
+            --cyan-glow: #00f0ff;
+            --ice-blue: #70d6ff;
+            --deep-navy: #050b14;
+            --frost-glass: rgba(10, 25, 47, 0.55);
+            --frost-border: rgba(0, 240, 255, 0.35);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #0a192f 0%, var(--deep-navy) 100%);
+            color: #ffffff;
+        }
+
+        /* --- BACKGROUND CANVAS FOR SNOW PARTICLES --- */
+        #snow-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* --- MAIN WRAPPER & CONTAINER --- */
+        .launcher-ui {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 30px;
+        }
+
+        /* --- TOP HEADER & BRANDING --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .brand-logo .icon {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #00f0ff, #0040ff);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px var(--cyan-glow);
+            font-weight: 900;
+            font-size: 20px;
+        }
+
+        .brand-logo h1 {
+            font-size: 28px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            background: linear-gradient(180deg, #ffffff 30%, var(--ice-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+        }
+
+        .client-tag {
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid var(--frost-border);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            letter-spacing: 1px;
+            color: var(--ice-blue);
+            backdrop-filter: blur(10px);
+        }
+
+        /* --- CENTER NAVIGATION PANEL --- */
+        .menu-container {
+            align-self: center;
+            width: 100%;
+            max-width: 400px;
+            background: var(--frost-glass);
+            border: 1px solid var(--frost-border);
+            backdrop-filter: blur(16px);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6),
+                        inset 0 0 15px rgba(0, 240, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .menu-btn {
+            position: relative;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            color: #ffffff;
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .menu-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .menu-btn:hover {
+            background: rgba(0, 240, 255, 0.15);
+            border-color: var(--cyan-glow);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+            transform: translateY(-2px);
+            color: var(--cyan-glow);
+        }
+
+        .menu-btn:hover::before {
+            left: 100%;
+        }
+
+        .menu-btn.primary {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.3), rgba(0, 80, 255, 0.3));
+            border-color: var(--cyan-glow);
+        }
+
+        /* --- FOOTER STATUS --- */
+        footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: var(--cyan-glow);
+            border-radius: 50%;
+            margin-right: 6px;
+            box-shadow: 0 0 8px var(--cyan-glow);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Snow Particles Canvas -->
+    <canvas id="snow-canvas"></canvas>
+
+    <!-- UI Overlay -->
+    <div class="launcher-ui">
+        <header>
+            <div class="brand-logo">
+                <div class="icon">❄</div>
+                <h1>Apollo</h1>
+            </div>
+            <div class="client-tag">v1.12.2 FROZEN</div>
+        </header>
+
+        <main class="menu-container">
+            <button class="menu-btn primary" id="play-btn">Launch Game</button>
+            <button class="menu-btn">Server List</button>
+            <button class="menu-btn">Settings</button>
+            <button class="menu-btn">Mods & Visuals</button>
+        </main>
+
+        <footer>
+            <div><span class="status-dot"></span>Client Engine Ready</div>
+            <div>Apollo Web Framework</div>
+        </footer>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- FROZEN PARTICLES ENGINE ---
+        const canvas = document.getElementById('snow-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        const numParticles = 90;
+        const particles = [];
+
+        for (let i = 0; i < numParticles; i++) {
+            particles.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                radius: Math.random() * 3 + 1,
+                speedY: Math.random() * 1 + 0.5,
+                speedX: Math.random() * 0.5 - 0.25,
+                opacity: Math.random() * 0.7 + 0.3
+            });
+        }
+
+        function renderSnow() {
+            ctx.clearRect(0, 0, width, height);
+
+            particles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(112, 214, 255, ${p.opacity})`;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#00f0ff';
+                ctx.fill();
+
+                p.y += p.speedY;
+                p.x += p.speedX;
+
+                if (p.y > height) {
+                    p.y = -5;
+                    p.x = Math.random() * width;
+                }
+                if (p.x > width) p.x = 0;
+                if (p.x < 0) p.x = width;
+            });
+
+            requestAnimationFrame(renderSnow);
+        }
+
+        renderSnow();
+
+        // --- INTERACTIVE EVENT LISTENERS ---
+        document.getElementById('play-btn').addEventListener('click', () => {
+            alert('Apollo Client Engine Initializing...');
+        });
+    </script>
+</body>
+</html>
